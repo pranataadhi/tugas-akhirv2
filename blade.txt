@@ -1,0 +1,25 @@
+Ubah resources/views/todo.blade.php
+Kita akan menggunakan {!! !!} untuk mencetak data. Ini mematikan fitur keamanan Blade dan membiarkan script jahat (XSS) berjalan.
+
+Cari bagian yang menampilkan nama tugas, dan ganti kurung kurawal ganda {{ }} menjadi {!! !!}.
+
+HTML
+
+@if($search)
+            <h3>Hasil pencarian: {!! $search !!}</h3>
+        @endif
+
+        <hr>
+
+<ul>
+            @foreach($tasks as $task)
+                <li>
+                    <span>{!! $task->name !!}</span>
+
+                    <div>
+                        <a href="/?edit_id={{ $task->id }}" class="btn-warning">Edit</a>
+                        <a href="/delete/{{ $task->id }}" class="btn-danger" onclick="return confirm('Yakin?')">Hapus</a>
+                    </div>
+                </li>
+            @endforeach
+        </ul>
