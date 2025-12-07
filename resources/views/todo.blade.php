@@ -71,7 +71,7 @@
 </head>
 
 <body>
-    <h1>Aplikasi Todo List (Laravel)</h1>
+    <h1>Simple Todo List</h1>
 
     <form action="/" method="GET">
         <input type="text" name="search" placeholder="Cari tugas..." value="{{ $search ?? '' }}">
