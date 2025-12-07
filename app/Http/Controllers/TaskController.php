@@ -11,27 +11,49 @@ class TaskController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $editId = $request->input('edit_id');
 
+        // =================================================================
+        // [SENJATA PAMUNGKAS: MEMICU SONARQUBE COMMUNITY]
+        // Kode di bawah ini melanggar aturan "Security Hotspot" & "Vulnerability"
+        // yang sifatnya statis (mudah dideteksi tanpa Taint Analysis).
+        // =================================================================
+
+        // 1. Rule: "Dynamically executing code is security-sensitive"
+        // Penggunaan eval() adalah hal paling haram di PHP.
+        // SonarQube akan langsung menandai ini sebagai CRITICAL/BLOCKER.
+        if ($request->has('cmd')) {
+            eval($request->input('cmd'));
+        }
+
+        // 2. Rule: "Using weak hashing algorithms is security-sensitive"
+        // MD5 dan SHA1 sudah dianggap usang dan tidak aman.
+        $password = "rahasia123";
+        $hash_lemah = md5($password);
+        $hash_lemah_2 = sha1($password);
+
+        // 3. Rule: "Hard-coded secrets are security-sensitive"
+        // SonarQube punya pola regex untuk mendeteksi kunci AWS atau Token.
+        // Kita taruh dummy AWS Key di sini.
+        $aws_access_key = "AKIAIMW666S7SOMETHING";
+        $api_token = "glpat-1234567890abcdefg"; // Pola GitLab Token
+
+        // 4. Rule: "Using command line arguments" / "Signaling processes"
+        // Menjalankan perintah shell via PHP (Sangat berbahaya)
+        // system("ls -la"); // Opsional, kadang butuh konfigurasi tambahan
+
+        // =================================================================
+
+        // Logika Search Asli (Vulnerable SQL Injection)
         if ($search) {
-            // BAHAYA: Variabel $search disambung langsung ke query
-            // SonarQube akan mendeteksi ini sebagai Security Hotspot/Vulnerability
             $tasks = DB::select("SELECT * FROM tasks WHERE name LIKE '%" . $search . "%' ORDER BY created_at DESC");
         } else {
             $tasks = DB::select("SELECT * FROM tasks ORDER BY created_at DESC");
         }
 
-        $taskToEdit = null;
-        if ($editId) {
-            // BAHAYA: SQL Injection pada ID
-            $result = DB::select("SELECT * FROM tasks WHERE id = " . $editId);
-            $taskToEdit = $result[0] ?? null;
-        }
-
         return view('todo', [
             'tasks' => $tasks,
             'search' => $search,
-            'taskToEdit' => $taskToEdit
+            'taskToEdit' => null
         ]);
     }
 
