@@ -3,78 +3,65 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\DB; // Wajib untuk Raw SQL
 
 class TaskController extends Controller
 {
-    // [VULNERABILITY 1] SQL Injection pada Pencarian
+    // 1. READ & SEARCH (RENTAN SQL INJECTION)
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $editId = $request->input('edit_id'); // Untuk mode edit
 
-        // =================================================================
-        // [SENJATA PAMUNGKAS: MEMICU SONARQUBE COMMUNITY]
-        // Kode di bawah ini melanggar aturan "Security Hotspot" & "Vulnerability"
-        // yang sifatnya statis (mudah dideteksi tanpa Taint Analysis).
-        // =================================================================
-
-        // 1. Rule: "Dynamically executing code is security-sensitive"
-        // Penggunaan eval() adalah hal paling haram di PHP.
-        // SonarQube akan langsung menandai ini sebagai CRITICAL/BLOCKER.
-        if ($request->has('cmd')) {
-            eval($request->input('cmd'));
-        }
-
-        // 2. Rule: "Using weak hashing algorithms is security-sensitive"
-        // MD5 dan SHA1 sudah dianggap usang dan tidak aman.
-        $password = "rahasia123";
-        $hash_lemah = md5($password);
-        $hash_lemah_2 = sha1($password);
-
-        // 3. Rule: "Hard-coded secrets are security-sensitive"
-        // SonarQube punya pola regex untuk mendeteksi kunci AWS atau Token.
-        // Kita taruh dummy AWS Key di sini.
-        $aws_access_key = "AKIAIMW666S7SOMETHING";
-        $api_token = "glpat-1234567890abcdefg"; // Pola GitLab Token
-
-        // 4. Rule: "Using command line arguments" / "Signaling processes"
-        // Menjalankan perintah shell via PHP (Sangat berbahaya)
-        // system("ls -la"); // Opsional, kadang butuh konfigurasi tambahan
-
-        // =================================================================
-
-        // Logika Search Asli (Vulnerable SQL Injection)
+        // Logika Pencarian (Vulnerable)
         if ($search) {
-            $tasks = DB::select("SELECT * FROM tasks WHERE name LIKE '%" . $search . "%' ORDER BY created_at DESC");
+            // [BAHAYA] SQL Injection: Variabel $search digabung langsung
+            $tasks = DB::select("SELECT * FROM tasks WHERE name LIKE '%" . $search . "%'");
         } else {
             $tasks = DB::select("SELECT * FROM tasks ORDER BY created_at DESC");
+        }
+
+        // Logika Edit: Jika tombol edit diklik, ambil data tugas tersebut
+        $taskToEdit = null;
+        if ($editId) {
+            // [BAHAYA] SQL Injection pada ID
+            $result = DB::select("SELECT * FROM tasks WHERE id = " . $editId);
+            $taskToEdit = $result[0] ?? null;
         }
 
         return view('todo', [
             'tasks' => $tasks,
             'search' => $search,
-            'taskToEdit' => null
+            'taskToEdit' => $taskToEdit
         ]);
     }
 
+    // 2. CREATE (TAMBAH)
     public function store(Request $request)
     {
         $name = $request->input('name');
-        // Simpan biasa (Raw Query juga biar konsisten rentan)
+
+        // [BAHAYA] SQL Injection pada Insert
         DB::statement("INSERT INTO tasks (name, created_at, updated_at) VALUES ('$name', NOW(), NOW())");
+
         return redirect('/');
     }
 
+    // 3. UPDATE (EDIT)
     public function update(Request $request, $id)
     {
         $name = $request->input('name');
+
+        // [BAHAYA] SQL Injection pada Update
         DB::statement("UPDATE tasks SET name = '$name', updated_at = NOW() WHERE id = " . $id);
+
         return redirect('/');
     }
 
+    // 4. DELETE (HAPUS)
     public function destroy($id)
     {
-        // [VULNERABILITY 2] SQL Injection pada Delete
+        // [BAHAYA] SQL Injection pada Delete
         DB::statement("DELETE FROM tasks WHERE id = " . $id);
         return redirect('/');
     }
