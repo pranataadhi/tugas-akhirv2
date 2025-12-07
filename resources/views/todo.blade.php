@@ -87,7 +87,6 @@
     @if (isset($taskToEdit))
         <h3>Edit Tugas</h3>
         <form action="/update/{{ $taskToEdit->id }}" method="POST">
-            @csrf
             <input type="text" name="name" value="{{ $taskToEdit->name }}" required>
             <button type="submit" style="background: #28a745;">Update</button>
             <a href="/" style="padding: 10px;">Batal</a>
@@ -95,7 +94,6 @@
     @else
         <h3>Tambah Tugas</h3>
         <form action="/add" method="POST">
-            @csrf
             <input type="text" name="name" placeholder="Tugas baru..." required>
             <button type="submit">Tambah</button>
         </form>
